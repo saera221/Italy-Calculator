@@ -33,11 +33,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Update npm
-        run: npm install --global npm@latest
-
       - name: Install NPM Dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Verify Node and Capacitor
         run: |
