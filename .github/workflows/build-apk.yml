@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -12,7 +13,7 @@ permissions:
 
 jobs:
   build-apk:
-    name: Build & Package APK
+    name: Build and Package APK
     runs-on: ubuntu-latest
 
     steps:
@@ -33,11 +34,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Verify Java
+      - name: Verify Java and Node
         run: |
-          echo "JAVA_HOME=$JAVA_HOME"
           java -version
           javac -version
+          node --version
+          npm --version
 
       - name: Install NPM Dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
@@ -51,14 +53,20 @@ jobs:
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
 
+      - name: Verify Gradle Java Version
+        run: |
+          cd android
+          ./gradlew --version
+
       - name: Build Debug APK
         run: |
           cd android
-          ./gradlew --stop
-          ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" assembleDebug --stacktrace
+          ./gradlew --no-daemon -Dorg.gradle.java.home="$JAVA_HOME" assembleDebug --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: Italy-Game-Calculator-APK
-          path
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
