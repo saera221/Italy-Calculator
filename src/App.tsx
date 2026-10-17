@@ -469,65 +469,67 @@ export default function App() {
   };
 
   return (
-    <div className="w-full h-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-gradient-to-r from-[#dfe9f3] to-white text-slate-900 flex flex-col justify-between items-center select-none font-sans antialiased p-1.5 sm:p-2 pb-safe pt-safe">
-      {/* Top Bar with Rules, Audio & History */}
-      <header className="w-full max-w-[720px] flex items-center justify-between gap-1.5 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => {
-              triggerHaptic(15);
-              setIsRulesOpen(true);
-            }}
-            className="bg-[#15803d] hover:bg-green-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
-          >
-            <span>📖</span>
-            <span>Game Rules</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {!isOnline && (
-            <span
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold"
-              title="Working offline"
+    <div className="w-full min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-r from-[#dfe9f3] to-white text-slate-900 flex flex-col items-center justify-center select-none font-sans antialiased px-3 sm:px-4 pt-safe pb-safe">
+      {/* Centered compact container matching preview with comfortable space above and below */}
+      <div className="w-full max-w-[480px] sm:max-w-[500px] flex flex-col items-center justify-center my-auto py-1 sm:py-2 gap-1.5 sm:gap-2">
+        {/* Top Bar with Rules, Audio & History */}
+        <header className="w-full flex items-center justify-between gap-2 shrink-0 py-0.5">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                triggerHaptic(15);
+                setIsRulesOpen(true);
+              }}
+              className="bg-[#15803d] hover:bg-green-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
             >
-              <WifiOff className="w-3 h-3 text-amber-700" />
-              Offline
-            </span>
-          )}
+              <span>📖</span>
+              <span>Game Rules</span>
+            </button>
+          </div>
 
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="w-7 h-7 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 flex items-center justify-center transition active:scale-95 shadow-xs"
-            aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-          >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-slate-400" /> : <Volume2 className="w-3.5 h-3.5 text-[#1d4ed8]" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {!isOnline && (
+              <span
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold"
+                title="Working offline"
+              >
+                <WifiOff className="w-3 h-3 text-amber-700" />
+                Offline
+              </span>
+            )}
 
-          {/* History Button placed where Install App was */}
-          <button
-            onClick={() => {
-              triggerHaptic(15);
-              setIsLogOpen(true);
-            }}
-            className="bg-[#1d4ed8] hover:bg-blue-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
-          >
-            <span>📜</span>
-            <span>History</span>
-          </button>
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="w-7 h-7 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 flex items-center justify-center transition active:scale-95 shadow-xs"
+              aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-slate-400" /> : <Volume2 className="w-3.5 h-3.5 text-[#1d4ed8]" />}
+            </button>
+
+            {/* History Button placed where Install App was */}
+            <button
+              onClick={() => {
+                triggerHaptic(15);
+                setIsLogOpen(true);
+              }}
+              className="bg-[#1d4ed8] hover:bg-blue-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
+            >
+              <span>📜</span>
+              <span>History</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Main App Title: Clean compact header */}
+        <div className="w-full text-center shrink-0">
+          <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-slate-700 m-0">
+            Italy Game calculator
+          </h2>
         </div>
-      </header>
 
-      {/* Main App Title: Smaller and moved higher up */}
-      <div className="w-full max-w-[720px] text-center shrink-0 mt-0.5 mb-1">
-        <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-slate-700 m-0">
-          Italy Game calculator
-        </h2>
-      </div>
-
-      {/* Container: Team Cards (Exact height for 6 pairs / 12 scores with zero scrolling) */}
-      <div className="w-full max-w-[720px] grid grid-cols-2 gap-2 sm:gap-3 shrink-0">
+        {/* Container: Team Cards (Exact height for 6 pairs / 12 scores with zero scrolling) */}
+        <div className="w-full grid grid-cols-2 gap-2 sm:gap-3 shrink-0">
         {/* Team 1 Card */}
         <div
           id="team1"
@@ -690,7 +692,7 @@ export default function App() {
       </div>
 
       {/* Controls Section (Compact, perfectly fitting into one frame) */}
-      <div className="w-full max-w-[520px] mx-auto flex flex-col justify-between gap-1.5 shrink-0 my-0.5">
+      <div className="w-full flex flex-col gap-1.5 shrink-0">
         {/* Win Limit */}
         {/* Win Limit (Centered with label above input box) */}
         <div className="flex flex-col items-center justify-center gap-0.5">
@@ -943,6 +945,7 @@ export default function App() {
             </svg>
           </button>
         </div>
+      </div>
       </div>
 
       {/* Modals */}
