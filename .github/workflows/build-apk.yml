@@ -7,6 +7,9 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-apk:
     name: Build & Package APK
@@ -30,10 +33,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Update npm
+        run: npm install --global npm@11
+
       - name: Install NPM Dependencies
-        run: |
-          npm cache clean --force
-          npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Build Web Application
         run: npm run build
