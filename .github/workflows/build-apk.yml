@@ -28,16 +28,22 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
 
       - name: Update npm
-        run: npm install --global npm@11
+        run: npm install --global npm@latest
 
       - name: Install NPM Dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm install --no-audit --no-fund
+
+      - name: Verify Node and Capacitor
+        run: |
+          node --version
+          npm --version
+          npx cap --version
 
       - name: Build Web Application
         run: npm run build
@@ -59,3 +65,4 @@ jobs:
           name: Italy-Game-Calculator-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
