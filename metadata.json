@@ -1,0 +1,6 @@
+{
+  "name": "Pro Score Tracker - Italy Game",
+  "description": "Installable Italy Game Calculator & Pro Score Tracker with round scoring, bidding, and match history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
