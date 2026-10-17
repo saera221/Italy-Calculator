@@ -8,6 +8,8 @@ import {
   Volume2,
   VolumeX,
   WifiOff,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { playTapSound, playRoundAddSound, playWinCelebration, triggerHaptic, playAlertSound } from './utils/audio';
@@ -176,6 +178,58 @@ export default function App() {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isWinnerOpen, setIsWinnerOpen] = useState(false);
+
+  // Theme Mode ('dark' | 'simple') with automatic device detection
+  const [themeMode, setThemeMode] = useState<'dark' | 'simple'>(() => {
+    const saved = localStorage.getItem('italy_game_theme');
+    if (saved === 'dark' || saved === 'simple') {
+      return saved;
+    }
+    // Device automatic detection: if device dark mode is enabled, start in dark, otherwise default to simple
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'simple';
+  });
+  const isDark = themeMode === 'dark';
+
+  const toggleTheme = () => {
+    triggerHaptic(20);
+    playTapSound();
+    setThemeMode((prev) => {
+      const next = prev === 'dark' ? 'simple' : 'dark';
+      localStorage.setItem('italy_game_theme', next);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('dark-mode');
+      document.body.classList.remove('simple-mode');
+    } else {
+      document.body.classList.add('simple-mode');
+      document.body.classList.remove('dark-mode');
+    }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', isDark ? '#080c14' : '#f1f5f9');
+    }
+  }, [isDark]);
+
+  // Listen for device system theme changes if user has not explicitly set a preference
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      const saved = localStorage.getItem('italy_game_theme');
+      if (!saved) {
+        setThemeMode(e.matches ? 'dark' : 'simple');
+      }
+    };
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
 
   // Save to localStorage
   useEffect(() => {
@@ -469,487 +523,711 @@ export default function App() {
   };
 
   return (
-    <div className="w-full min-h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-r from-[#dfe9f3] to-white text-slate-900 flex flex-col items-center justify-center select-none font-sans antialiased px-3 sm:px-4 pt-safe pb-safe">
+    <div className={`w-full min-h-[100dvh] overflow-y-auto overflow-x-hidden flex flex-col items-center justify-center select-none font-sans antialiased px-3 sm:px-4 pt-safe pb-safe transition-colors duration-200 ${
+      isDark ? 'dark-luxury-canvas text-slate-100' : 'simple-canvas text-slate-800'
+    }`}>
       {/* Centered compact container matching preview with comfortable space above and below */}
       <div className="w-full max-w-[480px] sm:max-w-[500px] flex flex-col items-center justify-center my-auto py-1 sm:py-2 gap-1.5 sm:gap-2">
-        {/* Top Bar with Rules, Audio & History */}
-        <header className="w-full flex items-center justify-between gap-2 shrink-0 py-0.5">
+        {/* Top Bar with Rules, Single Theme Toggle Button, Audio & History */}
+        <header className="w-full flex items-center justify-between gap-1.5 shrink-0 py-0.5">
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
                 triggerHaptic(15);
                 setIsRulesOpen(true);
               }}
-              className="bg-[#15803d] hover:bg-green-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
+              className={`font-bold px-2.5 sm:px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all flex items-center gap-1.5 border shadow-xs ${
+                isDark
+                  ? 'bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border-emerald-500/30 hover:border-emerald-500/60 shadow-emerald-950/40'
+                  : 'bg-white hover:bg-slate-50 text-emerald-700 border-emerald-300 shadow-slate-200'
+              }`}
             >
-              <span>📖</span>
+              <span className="text-sm">📖</span>
               <span>Game Rules</span>
+            </button>
+
+            {/* Single button toggle between Dark Mode and Simple Mode */}
+            <button
+              onClick={toggleTheme}
+              className={`font-bold px-2.5 sm:px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all flex items-center gap-1.5 border shadow-xs ${
+                isDark
+                  ? 'bg-slate-900/90 hover:bg-slate-800 text-amber-300 border-amber-500/30 hover:border-amber-500/60 shadow-amber-950/40'
+                  : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-slate-200'
+              }`}
+              title={isDark ? 'Switch to Simple Mode' : 'Switch to Dark Mode'}
+              aria-label={isDark ? 'Switch to Simple Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-300 fill-amber-300/20" />
+                  <span>Simple</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-slate-700 fill-slate-700/20" />
+                  <span>Dark</span>
+                </>
+              )}
             </button>
           </div>
 
           <div className="flex items-center gap-1.5">
             {!isOnline && (
               <span
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold"
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-2xs border ${
+                  isDark
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-600/50'
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                }`}
                 title="Working offline"
               >
-                <WifiOff className="w-3 h-3 text-amber-700" />
+                <WifiOff className="w-3 h-3 text-amber-500" />
                 Offline
               </span>
             )}
 
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="w-7 h-7 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 flex items-center justify-center transition active:scale-95 shadow-xs"
+              className={`w-7 h-7 rounded-xl border flex items-center justify-center transition active:scale-95 shadow-xs ${
+                isDark
+                  ? 'bg-slate-900/90 border-slate-700/80 hover:border-slate-500 text-slate-300'
+                  : 'bg-white border-slate-300 hover:border-slate-400 text-slate-600'
+              }`}
               aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
               title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
             >
-              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-slate-400" /> : <Volume2 className="w-3.5 h-3.5 text-[#1d4ed8]" />}
+              {isMuted ? (
+                <VolumeX className={`w-3.5 h-3.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+              ) : (
+                <Volume2 className={`w-3.5 h-3.5 ${isDark ? 'text-sky-400' : 'text-sky-600'}`} />
+              )}
             </button>
 
-            {/* History Button placed where Install App was */}
+            {/* History Button */}
             <button
               onClick={() => {
                 triggerHaptic(15);
                 setIsLogOpen(true);
               }}
-              className="bg-[#1d4ed8] hover:bg-blue-800 text-white font-bold px-3 py-1.5 rounded-md text-xs shadow-xs active:scale-95 transition flex items-center gap-1"
+              className={`font-bold px-2.5 sm:px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all flex items-center gap-1.5 border shadow-xs ${
+                isDark
+                  ? 'bg-slate-900/90 hover:bg-slate-800 text-amber-400 border-amber-500/30 hover:border-amber-500/60 shadow-amber-950/40'
+                  : 'bg-white hover:bg-slate-50 text-amber-700 border-amber-300 shadow-slate-200'
+              }`}
             >
-              <span>📜</span>
+              <span className="text-sm">📜</span>
               <span>History</span>
             </button>
           </div>
         </header>
 
-        {/* Main App Title: Clean compact header */}
+        {/* Main App Title */}
         <div className="w-full text-center shrink-0">
-          <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-slate-700 m-0">
-            Italy Game calculator
-          </h2>
+          <div className={`inline-flex items-center gap-2 px-3.5 py-0.5 rounded-full border ${
+            isDark
+              ? 'bg-slate-900/90 border-slate-800 shadow-inner'
+              : 'bg-white/90 border-slate-200 shadow-xs'
+          }`}>
+            <span className="text-[10px] text-amber-500">♠</span>
+            <h2 className={`text-xs sm:text-[13px] font-black uppercase tracking-widest m-0 ${
+              isDark ? 'text-slate-200' : 'text-slate-700'
+            }`}>
+              Italy Game Calculator
+            </h2>
+            <span className="text-[10px] text-rose-500">♥</span>
+          </div>
         </div>
 
         {/* Container: Team Cards (Exact height for 6 pairs / 12 scores with zero scrolling) */}
         <div className="w-full grid grid-cols-2 gap-2 sm:gap-3 shrink-0">
-        {/* Team 1 Card */}
-        <div
-          id="team1"
-          onClick={() => {
-            triggerHaptic(15);
-            setTeamSelectError(false);
-            setBidTeam((prev) => (prev === 1 ? null : 1));
-          }}
-          className={`cursor-pointer rounded-xl p-2 text-center transition-all bg-white shadow-xs flex flex-col justify-between border-2 min-h-[216px] h-[218px] sm:h-[224px] ${
-            winnerTeam === 1 ? 'bg-emerald-50 border-green-600 ring-4 ring-green-400' : 'border-slate-800'
-          }`}
-          role="button"
-          tabIndex={0}
-          aria-label={`Select ${name1}`}
-        >
-          <div className="shrink-0">
-            <input
-              id="name1"
-              value={name1}
-              onChange={(e) => setName1(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full font-bold text-center text-xs sm:text-sm text-slate-900 border-b border-slate-300 focus:border-blue-600 bg-transparent py-0.5 outline-hidden leading-tight"
-              placeholder="Team 1"
-            />
-          </div>
-
-          {/* 6 Pairs (12 scores) history grid - zero scroll, fits all 6 rows together in pairs */}
-          <div id="history1" className="grid grid-cols-2 gap-x-1.5 gap-y-1 my-1 text-xs font-semibold h-[134px] content-start items-center text-slate-800">
-            {history1.length === 0 ? (
-              <div className="col-span-2 h-full flex items-center justify-center text-[11px] text-slate-400">
-                No scores yet
-              </div>
-            ) : (
-              (() => {
-                const scores = history1.slice(-12);
-                const needsPlaceholder = scores.length % 2 !== 0 && scores.length < 12;
-                return (
-                  <>
-                    {scores.map((val, idx) => (
-                      <span
-                        key={idx}
-                        className={`h-[18px] px-1 rounded text-[11px] font-bold flex items-center justify-center leading-none ${
-                          val > 0
-                            ? 'text-green-800 bg-green-100 border border-green-200'
-                            : 'text-red-800 bg-red-100 border border-red-200'
-                        }`}
-                      >
-                        {val > 0 ? `+${val}` : val}
-                      </span>
-                    ))}
-                    {needsPlaceholder && (
-                      <span
-                        className="h-[18px] px-1 rounded text-[11px] font-semibold text-slate-300 border border-dashed border-slate-200 bg-slate-50/40 flex items-center justify-center leading-none"
-                        title="Round in progress"
-                      >
-                        —
-                      </span>
-                    )}
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          <div className="shrink-0 pt-1 pb-0.5 border-t border-slate-200 flex items-baseline justify-center gap-1.5">
-            <h2 id="score1" className="text-2xl sm:text-3xl font-black text-slate-900 my-0 leading-none">
-              {score1}
-            </h2>
-            {/* Onion skin preview of current set bid */}
-            {bidTeam === 1 && (
-              <span
-                className="text-xs font-normal text-slate-500 opacity-55 select-none tracking-tight leading-none"
-                title={`Current Bid: ${bidValue}`}
-              >
-                {bidValue === 10 ? '(+13/−10)' : `(±${bidValue})`}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Team 2 Card */}
-        <div
-          id="team2"
-          onClick={() => {
-            triggerHaptic(15);
-            setTeamSelectError(false);
-            setBidTeam((prev) => (prev === 2 ? null : 2));
-          }}
-          className={`cursor-pointer rounded-xl p-2 text-center transition-all bg-white shadow-xs flex flex-col justify-between border-2 min-h-[216px] h-[218px] sm:h-[224px] ${
-            winnerTeam === 2 ? 'bg-emerald-50 border-green-600 ring-4 ring-green-400' : 'border-slate-800'
-          }`}
-          role="button"
-          tabIndex={0}
-          aria-label={`Select ${name2}`}
-        >
-          <div className="shrink-0">
-            <input
-              id="name2"
-              value={name2}
-              onChange={(e) => setName2(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full font-bold text-center text-xs sm:text-sm text-slate-900 border-b border-slate-300 focus:border-blue-600 bg-transparent py-0.5 outline-hidden leading-tight"
-              placeholder="Team 2"
-            />
-          </div>
-
-          {/* 6 Pairs (12 scores) history grid - zero scroll, fits all 6 rows together in pairs */}
-          <div id="history2" className="grid grid-cols-2 gap-x-1.5 gap-y-1 my-1 text-xs font-semibold h-[134px] content-start items-center text-slate-800">
-            {history2.length === 0 ? (
-              <div className="col-span-2 h-full flex items-center justify-center text-[11px] text-slate-400">
-                No scores yet
-              </div>
-            ) : (
-              (() => {
-                const scores = history2.slice(-12);
-                const needsPlaceholder = scores.length % 2 !== 0 && scores.length < 12;
-                return (
-                  <>
-                    {scores.map((val, idx) => (
-                      <span
-                        key={idx}
-                        className={`h-[18px] px-1 rounded text-[11px] font-bold flex items-center justify-center leading-none ${
-                          val > 0
-                            ? 'text-green-800 bg-green-100 border border-green-200'
-                            : 'text-red-800 bg-red-100 border border-red-200'
-                        }`}
-                      >
-                        {val > 0 ? `+${val}` : val}
-                      </span>
-                    ))}
-                    {needsPlaceholder && (
-                      <span
-                        className="h-[18px] px-1 rounded text-[11px] font-semibold text-slate-300 border border-dashed border-slate-200 bg-slate-50/40 flex items-center justify-center leading-none"
-                        title="Round in progress"
-                      >
-                        —
-                      </span>
-                    )}
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          <div className="shrink-0 pt-1 pb-0.5 border-t border-slate-200 flex items-baseline justify-center gap-1.5">
-            <h2 id="score2" className="text-2xl sm:text-3xl font-black text-slate-900 my-0 leading-none">
-              {score2}
-            </h2>
-            {/* Onion skin preview of current set bid */}
-            {bidTeam === 2 && (
-              <span
-                className="text-xs font-normal text-slate-500 opacity-55 select-none tracking-tight leading-none"
-                title={`Current Bid: ${bidValue}`}
-              >
-                {bidValue === 10 ? '(+13/−10)' : `(±${bidValue})`}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Controls Section (Compact, perfectly fitting into one frame) */}
-      <div className="w-full flex flex-col gap-1.5 shrink-0">
-        {/* Win Limit */}
-        {/* Win Limit (Centered with label above input box) */}
-        <div className="flex flex-col items-center justify-center gap-0.5">
-          <label htmlFor="winLimit" className="text-[11px] sm:text-xs font-bold text-slate-800 tracking-tight text-center">
-            Win Limit
-          </label>
-          <input
-            id="winLimit"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={winLimitText}
-            onChange={handleWinLimitChange}
-            onBlur={handleWinLimitBlur}
-            placeholder="50"
-            className="w-16 h-7 text-center font-bold text-sm border border-slate-400 rounded-md bg-white text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        {/* Round Point Calculator */}
-        <section className="round-panel bg-white/95 rounded-[10px] p-2 border border-[#b9c6d4] shadow-xs flex flex-col gap-1.5">
-          <h3 className="text-xs font-bold text-center text-slate-900 m-0 leading-tight">
-            Round Point Calculator
-          </h3>
-
-          <div className="grid grid-cols-2 gap-1.5 text-xs">
-            {/* Box 1: Bidding Team */}
-            <div>
-              <label className="text-[11px] sm:text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center">
-                Bidding Team
-              </label>
-              <div
-                className={`h-[62px] flex gap-1 mt-1 items-stretch ${
-                  teamSelectError && !bidTeam ? 'animate-vibrate-shake' : ''
+          {/* Team 1 Card */}
+          <div
+            id="team1"
+            onClick={() => {
+              triggerHaptic(15);
+              setTeamSelectError(false);
+              setBidTeam((prev) => (prev === 1 ? null : 1));
+            }}
+            className={`cursor-pointer rounded-2xl p-2.5 text-center transition-all flex flex-col justify-between border-2 min-h-[216px] h-[218px] sm:h-[224px] ${
+              isDark
+                ? `bg-gradient-to-b from-[#0d1e18] to-[#07130f] shadow-lg ${
+                    winnerTeam === 1
+                      ? 'border-emerald-400 ring-4 ring-emerald-400 shadow-[0_0_35px_rgba(16,185,129,0.45)]'
+                      : bidTeam === 1
+                      ? 'border-emerald-400 ring-2 ring-emerald-500/70 shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+                      : 'border-emerald-500/40 hover:border-emerald-500/70 hover:shadow-emerald-950/50'
+                  }`
+                : `bg-white shadow-md ${
+                    winnerTeam === 1
+                      ? 'border-emerald-500 ring-4 ring-emerald-400 shadow-lg shadow-emerald-200'
+                      : bidTeam === 1
+                      ? 'border-emerald-500 ring-2 ring-emerald-400/80 shadow-md shadow-emerald-100 bg-emerald-50/20'
+                      : 'border-emerald-300 hover:border-emerald-400'
+                  }`
+            }`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Select ${name1}`}
+          >
+            <div className="shrink-0 flex items-center justify-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isDark ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]' : 'bg-emerald-500'}`}></span>
+              <input
+                id="name1"
+                value={name1}
+                onChange={(e) => setName1(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className={`w-full font-black text-center text-xs sm:text-sm py-0.5 outline-hidden leading-tight bg-transparent ${
+                  isDark
+                    ? 'text-emerald-300 border-b border-emerald-500/40 focus:border-emerald-400'
+                    : 'text-emerald-800 border-b border-emerald-300 focus:border-emerald-600'
                 }`}
-              >
-                <button
-                  type="button"
-                  id="bidTeamBtn1"
-                  onClick={() => {
-                    triggerHaptic(15);
-                    setTeamSelectError(false);
-                    setBidTeam(bidTeam === 1 ? null : 1);
-                  }}
-                  className={`flex-1 h-full py-1 px-1.5 rounded-md font-bold text-xs border transition-all flex flex-col items-center justify-center leading-tight ${
-                    bidTeam === 1
-                      ? 'bg-[#15803d] text-white border-[#166534] ring-2 ring-green-300 shadow-xs'
-                      : teamSelectError
-                      ? 'bg-red-50 text-red-950 border-2 border-red-500 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
-                      : 'bg-[#d1d5db] text-slate-800 border-slate-400 hover:bg-slate-300'
-                  }`}
-                  aria-label={`Select ${name1 || 'Team 1'}`}
-                >
-                  <span className="truncate max-w-full text-xs font-bold">{name1 || 'Team 1'}</span>
-                  <span
-                    className={`text-[9px] font-normal transition-colors ${
-                      bidTeam === 1
-                        ? 'opacity-90'
-                        : teamSelectError
-                        ? 'text-red-700 font-bold underline'
-                        : 'opacity-90'
-                    }`}
-                  >
-                    {bidTeam === 1 ? 'Selected' : teamSelectError ? 'Tap to Select' : 'Select'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  id="bidTeamBtn2"
-                  onClick={() => {
-                    triggerHaptic(15);
-                    setTeamSelectError(false);
-                    setBidTeam(bidTeam === 2 ? null : 2);
-                  }}
-                  className={`flex-1 h-full py-1 px-1.5 rounded-md font-bold text-xs border transition-all flex flex-col items-center justify-center leading-tight ${
-                    bidTeam === 2
-                      ? 'bg-[#15803d] text-white border-[#166534] ring-2 ring-green-300 shadow-xs'
-                      : teamSelectError
-                      ? 'bg-red-50 text-red-950 border-2 border-red-500 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
-                      : 'bg-[#d1d5db] text-slate-800 border-slate-400 hover:bg-slate-300'
-                  }`}
-                  aria-label={`Select ${name2 || 'Team 2'}`}
-                >
-                  <span className="truncate max-w-full text-xs font-bold">{name2 || 'Team 2'}</span>
-                  <span
-                    className={`text-[9px] font-normal transition-colors ${
-                      bidTeam === 2
-                        ? 'opacity-90'
-                        : teamSelectError
-                        ? 'text-red-700 font-bold underline'
-                        : 'opacity-90'
-                    }`}
-                  >
-                    {bidTeam === 2 ? 'Selected' : teamSelectError ? 'Tap to Select' : 'Select'}
-                  </span>
-                </button>
-              </div>
+                placeholder="Team 1"
+              />
             </div>
 
-            {/* Box 2: Bid Level (7–10) with horizontal slider */}
-            <div>
-              <label className="text-[11px] sm:text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center">
-                Bid Level (7–10)
-              </label>
-              <div className="h-[62px] bg-white border border-[#9aa7b5] rounded-md px-1.5 py-1 shadow-2xs flex flex-col justify-between mt-1">
-                <output id="bidSliderValue" className="block text-center text-lg font-extrabold text-[#1d4ed8] leading-none">
-                  {bidValue}
-                </output>
-                <input
-                  id="bidSlider"
-                  type="range"
-                  min={7}
-                  max={10}
-                  step={1}
-                  value={bidValue}
-                  onChange={(e) => chooseBid(Number(e.target.value))}
-                  className="w-full h-4 accent-[#1d4ed8] cursor-pointer touch-pan-y"
-                  aria-label="Bid level"
-                />
-                <div className="flex justify-between px-0.5 text-[10px] font-bold text-slate-600 leading-none">
-                  <span>7</span>
-                  <span>8</span>
-                  <span>9</span>
-                  <span>10</span>
+            {/* 6 Pairs (12 scores) history grid - zero scroll, fits all 6 rows together in pairs */}
+            <div id="history1" className={`grid grid-cols-2 gap-x-1.5 gap-y-1 my-1 text-xs font-semibold h-[134px] content-start items-center ${
+              isDark ? 'text-slate-200' : 'text-slate-800'
+            }`}>
+              {history1.length === 0 ? (
+                <div className={`col-span-2 h-full flex items-center justify-center text-[11px] font-semibold ${
+                  isDark ? 'text-emerald-500/40' : 'text-slate-400'
+                }`}>
+                  No scores yet
+                </div>
+              ) : (
+                (() => {
+                  const scores = history1.slice(-12);
+                  const needsPlaceholder = scores.length % 2 !== 0 && scores.length < 12;
+                  return (
+                    <>
+                      {scores.map((val, idx) => (
+                        <span
+                          key={idx}
+                          className={`h-[18px] px-1 rounded-md text-[11px] font-black flex items-center justify-center leading-none shadow-2xs ${
+                            isDark
+                              ? val > 0
+                                ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                : 'text-rose-300 bg-rose-500/20 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
+                              : val > 0
+                              ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                              : 'text-rose-700 bg-rose-50 border border-rose-200'
+                          }`}
+                        >
+                          {val > 0 ? `+${val}` : val}
+                        </span>
+                      ))}
+                      {needsPlaceholder && (
+                        <span
+                          className={`h-[18px] px-1 rounded-md text-[11px] font-semibold border border-dashed flex items-center justify-center leading-none ${
+                            isDark
+                              ? 'text-emerald-500/40 border-emerald-500/30 bg-emerald-950/20'
+                              : 'text-slate-400 border-slate-300 bg-slate-50'
+                          }`}
+                          title="Round in progress"
+                        >
+                          —
+                        </span>
+                      )}
+                    </>
+                  );
+                })()
+              )}
+            </div>
+
+            <div className={`shrink-0 pt-1 pb-0.5 border-t flex items-baseline justify-center gap-1.5 ${
+              isDark ? 'border-emerald-500/30' : 'border-slate-100'
+            }`}>
+              <h2 id="score1" className={`text-2xl sm:text-3xl font-black my-0 leading-none ${
+                isDark
+                  ? 'text-white drop-shadow-[0_2px_12px_rgba(16,185,129,0.4)]'
+                  : 'text-emerald-700'
+              }`}>
+                {score1}
+              </h2>
+              {/* Onion skin preview of current set bid */}
+              {bidTeam === 1 && (
+                <span
+                  className={`text-xs font-bold select-none tracking-tight leading-none px-1.5 py-0.5 rounded-full border ${
+                    isDark
+                      ? 'text-emerald-300 bg-emerald-950/90 border-emerald-500/50'
+                      : 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                  }`}
+                  title={`Current Bid: ${bidValue}`}
+                >
+                  {bidValue === 10 ? '+13/−10' : `±${bidValue}`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Team 2 Card */}
+          <div
+            id="team2"
+            onClick={() => {
+              triggerHaptic(15);
+              setTeamSelectError(false);
+              setBidTeam((prev) => (prev === 2 ? null : 2));
+            }}
+            className={`cursor-pointer rounded-2xl p-2.5 text-center transition-all flex flex-col justify-between border-2 min-h-[216px] h-[218px] sm:h-[224px] ${
+              isDark
+                ? `bg-gradient-to-b from-[#0e1b2d] to-[#070e1a] shadow-lg ${
+                    winnerTeam === 2
+                      ? 'border-sky-400 ring-4 ring-sky-400 shadow-[0_0_35px_rgba(56,189,248,0.45)]'
+                      : bidTeam === 2
+                      ? 'border-sky-400 ring-2 ring-sky-500/70 shadow-[0_0_24px_rgba(56,189,248,0.3)]'
+                      : 'border-sky-500/40 hover:border-sky-500/70 hover:shadow-sky-950/50'
+                  }`
+                : `bg-white shadow-md ${
+                    winnerTeam === 2
+                      ? 'border-sky-500 ring-4 ring-sky-400 shadow-lg shadow-sky-200'
+                      : bidTeam === 2
+                      ? 'border-sky-500 ring-2 ring-sky-400/80 shadow-md shadow-sky-100 bg-sky-50/20'
+                      : 'border-sky-300 hover:border-sky-400'
+                  }`
+            }`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Select ${name2}`}
+          >
+            <div className="shrink-0 flex items-center justify-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isDark ? 'bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]' : 'bg-sky-500'}`}></span>
+              <input
+                id="name2"
+                value={name2}
+                onChange={(e) => setName2(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className={`w-full font-black text-center text-xs sm:text-sm py-0.5 outline-hidden leading-tight bg-transparent ${
+                  isDark
+                    ? 'text-sky-300 border-b border-sky-500/40 focus:border-sky-400'
+                    : 'text-sky-800 border-b border-sky-300 focus:border-sky-600'
+                }`}
+                placeholder="Team 2"
+              />
+            </div>
+
+            {/* 6 Pairs (12 scores) history grid - zero scroll, fits all 6 rows together in pairs */}
+            <div id="history2" className={`grid grid-cols-2 gap-x-1.5 gap-y-1 my-1 text-xs font-semibold h-[134px] content-start items-center ${
+              isDark ? 'text-slate-200' : 'text-slate-800'
+            }`}>
+              {history2.length === 0 ? (
+                <div className={`col-span-2 h-full flex items-center justify-center text-[11px] font-semibold ${
+                  isDark ? 'text-sky-500/40' : 'text-slate-400'
+                }`}>
+                  No scores yet
+                </div>
+              ) : (
+                (() => {
+                  const scores = history2.slice(-12);
+                  const needsPlaceholder = scores.length % 2 !== 0 && scores.length < 12;
+                  return (
+                    <>
+                      {scores.map((val, idx) => (
+                        <span
+                          key={idx}
+                          className={`h-[18px] px-1 rounded-md text-[11px] font-black flex items-center justify-center leading-none shadow-2xs ${
+                            isDark
+                              ? val > 0
+                                ? 'text-sky-300 bg-sky-500/20 border border-sky-500/40 shadow-[0_0_8px_rgba(56,189,248,0.15)]'
+                                : 'text-rose-300 bg-rose-500/20 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.15)]'
+                              : val > 0
+                              ? 'text-sky-700 bg-sky-50 border border-sky-200'
+                              : 'text-rose-700 bg-rose-50 border border-rose-200'
+                          }`}
+                        >
+                          {val > 0 ? `+${val}` : val}
+                        </span>
+                      ))}
+                      {needsPlaceholder && (
+                        <span
+                          className={`h-[18px] px-1 rounded-md text-[11px] font-semibold border border-dashed flex items-center justify-center leading-none ${
+                            isDark
+                              ? 'text-sky-500/40 border-sky-500/30 bg-sky-950/20'
+                              : 'text-slate-400 border-slate-300 bg-slate-50'
+                          }`}
+                          title="Round in progress"
+                        >
+                          —
+                        </span>
+                      )}
+                    </>
+                  );
+                })()
+              )}
+            </div>
+
+            <div className={`shrink-0 pt-1 pb-0.5 border-t flex items-baseline justify-center gap-1.5 ${
+              isDark ? 'border-sky-500/30' : 'border-slate-100'
+            }`}>
+              <h2 id="score2" className={`text-2xl sm:text-3xl font-black my-0 leading-none ${
+                isDark
+                  ? 'text-white drop-shadow-[0_2px_12px_rgba(56,189,248,0.4)]'
+                  : 'text-sky-700'
+              }`}>
+                {score2}
+              </h2>
+              {/* Onion skin preview of current set bid */}
+              {bidTeam === 2 && (
+                <span
+                  className={`text-xs font-bold select-none tracking-tight leading-none px-1.5 py-0.5 rounded-full border ${
+                    isDark
+                      ? 'text-sky-300 bg-sky-950/90 border-sky-500/50'
+                      : 'text-sky-800 bg-sky-100 border-sky-300'
+                  }`}
+                  title={`Current Bid: ${bidValue}`}
+                >
+                  {bidValue === 10 ? '+13/−10' : `±${bidValue}`}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Controls Section (Compact, perfectly fitting into one frame) */}
+        <div className="w-full flex flex-col gap-1.5 shrink-0">
+          {/* Win Limit */}
+          <div className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-1 border shadow-xs ${
+            isDark
+              ? 'bg-slate-900/90 border-amber-500/30 shadow-amber-950/20'
+              : 'bg-white border-amber-300 shadow-slate-200'
+          }`}>
+            <label htmlFor="winLimit" className={`text-[11px] sm:text-xs font-black tracking-wider uppercase text-center flex items-center gap-1 ${
+              isDark ? 'text-amber-400' : 'text-amber-700'
+            }`}>
+              <span>🎯</span>
+              <span>Win Limit</span>
+            </label>
+            <input
+              id="winLimit"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={winLimitText}
+              onChange={handleWinLimitChange}
+              onBlur={handleWinLimitBlur}
+              placeholder="50"
+              className={`w-16 h-7 text-center font-black text-sm border rounded-lg shadow-inner focus:outline-none focus:ring-2 ${
+                isDark
+                  ? 'border-amber-500/50 bg-[#090e18] text-amber-300 focus:ring-amber-400 focus:border-amber-400'
+                  : 'border-amber-300 bg-amber-50/60 text-amber-900 focus:ring-amber-500 focus:border-amber-500'
+              }`}
+            />
+          </div>
+
+          {/* Round Point Calculator */}
+          <section className={`round-panel rounded-2xl p-2.5 border flex flex-col gap-1.5 ${
+            isDark
+              ? 'bg-[#0d1424]/95 backdrop-blur-md border-slate-700/80 shadow-2xl'
+              : 'bg-white border-slate-200/90 shadow-md text-slate-800'
+          }`}>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-[10px] text-amber-500">♠</span>
+              <h3 className={`text-xs font-black text-center uppercase tracking-wider m-0 leading-tight ${
+                isDark ? 'text-slate-200' : 'text-slate-800'
+              }`}>
+                Round Point Calculator
+              </h3>
+              <span className="text-[10px] text-rose-500">♥</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              {/* Box 1: Bidding Team */}
+              <div>
+                <label className={`text-[11px] sm:text-xs font-black whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center ${
+                  isDark ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Bidding Team
+                </label>
+                <div
+                  className={`h-[62px] flex gap-1 mt-1 items-stretch ${
+                    teamSelectError && !bidTeam ? 'animate-vibrate-shake' : ''
+                  }`}
+                >
+                  <button
+                    type="button"
+                    id="bidTeamBtn1"
+                    onClick={() => {
+                      triggerHaptic(15);
+                      setTeamSelectError(false);
+                      setBidTeam(bidTeam === 1 ? null : 1);
+                    }}
+                    className={`flex-1 h-full py-1 px-1.5 rounded-lg font-bold text-xs border transition-all flex flex-col items-center justify-center leading-tight ${
+                      bidTeam === 1
+                        ? 'bg-gradient-to-br from-emerald-600 to-teal-800 text-white border-emerald-400 ring-2 ring-emerald-400/50 shadow-md'
+                        : teamSelectError
+                        ? isDark
+                          ? 'bg-red-950/80 text-red-200 border-red-500 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
+                          : 'bg-red-100 text-red-800 border-red-400 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
+                        : isDark
+                        ? 'bg-slate-800/80 text-emerald-400 border-slate-700 hover:border-emerald-500/40 hover:bg-slate-800'
+                        : 'bg-slate-100 text-emerald-700 border-slate-300 hover:border-emerald-400 hover:bg-slate-200'
+                    }`}
+                    aria-label={`Select ${name1 || 'Team 1'}`}
+                  >
+                    <span className="truncate max-w-full text-xs font-black">{name1 || 'Team 1'}</span>
+                    <span
+                      className={`text-[9px] font-bold transition-colors ${
+                        bidTeam === 1
+                          ? 'text-emerald-100'
+                          : teamSelectError
+                          ? 'text-red-500 underline'
+                          : isDark
+                          ? 'text-emerald-500'
+                          : 'text-emerald-600'
+                      }`}
+                    >
+                      {bidTeam === 1 ? 'Selected' : teamSelectError ? 'Tap to Select' : 'Select'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    id="bidTeamBtn2"
+                    onClick={() => {
+                      triggerHaptic(15);
+                      setTeamSelectError(false);
+                      setBidTeam(bidTeam === 2 ? null : 2);
+                    }}
+                    className={`flex-1 h-full py-1 px-1.5 rounded-lg font-bold text-xs border transition-all flex flex-col items-center justify-center leading-tight ${
+                      bidTeam === 2
+                        ? 'bg-gradient-to-br from-sky-600 to-blue-800 text-white border-sky-400 ring-2 ring-sky-400/50 shadow-md'
+                        : teamSelectError
+                        ? isDark
+                          ? 'bg-red-950/80 text-red-200 border-red-500 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
+                          : 'bg-red-100 text-red-800 border-red-400 ring-2 ring-red-400 shadow-md animate-red-glow scale-[1.02]'
+                        : isDark
+                        ? 'bg-slate-800/80 text-sky-400 border-slate-700 hover:border-sky-500/40 hover:bg-slate-800'
+                        : 'bg-slate-100 text-sky-700 border-slate-300 hover:border-sky-400 hover:bg-slate-200'
+                    }`}
+                    aria-label={`Select ${name2 || 'Team 2'}`}
+                  >
+                    <span className="truncate max-w-full text-xs font-black">{name2 || 'Team 2'}</span>
+                    <span
+                      className={`text-[9px] font-bold transition-colors ${
+                        bidTeam === 2
+                          ? 'text-sky-100'
+                          : teamSelectError
+                          ? 'text-red-500 underline'
+                          : isDark
+                          ? 'text-sky-500'
+                          : 'text-sky-600'
+                      }`}
+                    >
+                      {bidTeam === 2 ? 'Selected' : teamSelectError ? 'Tap to Select' : 'Select'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Box 2: Bid Level (7–10) with horizontal slider */}
+              <div>
+                <label className={`text-[11px] sm:text-xs font-black whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center ${
+                  isDark ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Bid Level (7–10)
+                </label>
+                <div className={`h-[62px] border rounded-lg px-2 py-1 shadow-inner flex flex-col justify-between mt-1 ${
+                  isDark
+                    ? 'bg-[#090e18] border-slate-700'
+                    : 'bg-slate-100 border-slate-300'
+                }`}>
+                  <output id="bidSliderValue" className={`block text-center text-lg font-black leading-none ${
+                    isDark
+                      ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                      : 'text-amber-600'
+                  }`}>
+                    {bidValue}
+                  </output>
+                  <input
+                    id="bidSlider"
+                    type="range"
+                    min={7}
+                    max={10}
+                    step={1}
+                    value={bidValue}
+                    onChange={(e) => chooseBid(Number(e.target.value))}
+                    className={`w-full h-4 cursor-pointer touch-pan-y ${isDark ? 'luxury-slider' : 'simple-slider'}`}
+                    aria-label="Bid level"
+                  />
+                  <div className={`flex justify-between px-0.5 text-[10px] font-black leading-none ${
+                    isDark ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
+                    <span>7</span>
+                    <span>8</span>
+                    <span>9</span>
+                    <span>10</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 3: Bidder Cards */}
+              <div>
+                <label className={`text-[11px] sm:text-xs font-black whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center ${
+                  isDark ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Bidder Cards
+                </label>
+                <div className="grid grid-cols-[34px_minmax(0,1fr)_34px] gap-1 items-stretch h-8 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => stepNumber(-1)}
+                    className={`h-full font-black text-lg rounded-lg border flex items-center justify-center transition active:scale-95 leading-none shadow-xs ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-sky-400 border-slate-700'
+                        : 'bg-slate-100 hover:bg-slate-200 text-sky-700 border-slate-300'
+                    }`}
+                    aria-label="Decrease bidding team cards"
+                  >
+                    −
+                  </button>
+                  <input
+                    id="bidCards"
+                    type="text"
+                    value={bidCards}
+                    readOnly
+                    className={`h-full w-full text-center font-black text-sm border rounded-lg outline-hidden shadow-inner ${
+                      isDark
+                        ? 'bg-[#090e18] border-slate-700 text-white'
+                        : 'bg-white border-slate-300 text-slate-800'
+                    }`}
+                    aria-label="Cards taken by bidding team"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => stepNumber(1)}
+                    className={`h-full font-black text-lg rounded-lg border flex items-center justify-center transition active:scale-95 leading-none shadow-xs ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-sky-400 border-slate-700'
+                        : 'bg-slate-100 hover:bg-slate-200 text-sky-700 border-slate-300'
+                    }`}
+                    aria-label="Increase bidding team cards"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Box 4: Opponent Cards */}
+              <div>
+                <label className={`text-[11px] sm:text-xs font-black whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center ${
+                  isDark ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Opponent Cards
+                </label>
+                <div className="h-8 mt-1">
+                  <input
+                    id="oppCards"
+                    type="text"
+                    value={oppCards}
+                    readOnly
+                    className={`w-full h-full text-center font-black text-sm border rounded-lg outline-hidden shadow-inner ${
+                      isDark
+                        ? 'bg-[#090e18] border-slate-700 text-amber-400'
+                        : 'bg-amber-50/50 border-slate-300 text-amber-700'
+                    }`}
+                    aria-label="Opponent cards calculated automatically"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Box 3: Bidder Cards */}
-            <div>
-              <label className="text-[11px] sm:text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center">
-                Bidder Cards
-              </label>
-              <div className="grid grid-cols-[34px_minmax(0,1fr)_34px] gap-1 items-stretch h-8 mt-1">
-                <button
-                  type="button"
-                  onClick={() => stepNumber(-1)}
-                  className="h-full bg-[#1d4ed8] hover:bg-blue-800 text-white font-bold text-lg rounded-md flex items-center justify-center transition active:scale-95 leading-none"
-                  aria-label="Decrease bidding team cards"
+            {/* Calculate Button */}
+            <button
+              onClick={calculateRound}
+              className={`w-full h-8 py-1 px-3 font-black text-xs rounded-lg transition-all active:scale-[0.98] uppercase tracking-wider ${
+                isDark
+                  ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 shadow-lg shadow-teal-500/20 border border-teal-300/40'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 border border-emerald-500'
+              }`}
+            >
+              Calculate &amp; Add Round
+            </button>
+
+            {/* Status Message Container */}
+            <div className="h-4 flex items-center justify-center overflow-hidden">
+              {roundMessage && (
+                <div
+                  id="roundMessage"
+                  role="status"
+                  aria-live="polite"
+                  className={`text-center font-extrabold text-[11px] px-2 py-0.5 rounded-md border truncate w-full shadow-2xs ${
+                    teamSelectError
+                      ? isDark
+                        ? 'text-red-200 bg-red-950/80 border-red-500/60 ring-1 ring-red-500/40'
+                        : 'text-red-800 bg-red-100 border-red-300'
+                      : isDark
+                      ? 'text-sky-200 bg-sky-950/80 border-sky-500/60'
+                      : 'text-sky-800 bg-sky-100 border-sky-300'
+                  }`}
                 >
-                  −
-                </button>
-                <input
-                  id="bidCards"
-                  type="text"
-                  value={bidCards}
-                  readOnly
-                  className="h-full w-full text-center font-bold text-sm bg-white border border-[#9aa7b5] rounded-md outline-hidden text-slate-900"
-                  aria-label="Cards taken by bidding team"
-                />
-                <button
-                  type="button"
-                  onClick={() => stepNumber(1)}
-                  className="h-full bg-[#1d4ed8] hover:bg-blue-800 text-white font-bold text-lg rounded-md flex items-center justify-center transition active:scale-95 leading-none"
-                  aria-label="Increase bidding team cards"
-                >
-                  +
-                </button>
-              </div>
+                  {roundMessage}
+                </div>
+              )}
             </div>
+          </section>
 
-            {/* Box 4: Opponent Cards */}
-            <div>
-              <label className="text-[11px] sm:text-xs font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis h-4 flex items-center">
-                Opponent Cards
-              </label>
-              <div className="h-8 mt-1">
-                <input
-                  id="oppCards"
-                  type="text"
-                  value={oppCards}
-                  readOnly
-                  className="w-full h-full text-center font-bold text-sm bg-slate-100 border border-[#9aa7b5] rounded-md outline-hidden text-slate-800"
-                  aria-label="Opponent cards calculated automatically"
-                />
-              </div>
-            </div>
+          {/* Action Bar (Undo, Redo, Reset) */}
+          <div className="flex justify-center items-center gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={roundHistory.length === 0}
+              className={`w-12 h-8 flex items-center justify-center rounded-lg border shadow-xs transition active:scale-95 ${
+                roundHistory.length === 0
+                  ? isDark
+                    ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                    : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                  : isDark
+                  ? 'bg-slate-800/90 text-sky-400 border-slate-700 hover:border-sky-500/40 hover:bg-slate-700 shadow-sky-950/50'
+                  : 'bg-white text-sky-700 border-slate-300 hover:bg-slate-50 hover:border-sky-400 shadow-slate-200'
+              }`}
+              aria-label="Undo 1 Round"
+              title="Undo 1 Round"
+            >
+              <svg className="w-4 h-4 stroke-[2.3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 14 4 9l5-5M4 9h9a7 7 0 0 1 0 14h-2" />
+              </svg>
+            </button>
+
+            <button
+              onClick={handleRedo}
+              disabled={roundRedoStack.length === 0}
+              className={`w-12 h-8 flex items-center justify-center rounded-lg border shadow-xs transition active:scale-95 ${
+                roundRedoStack.length === 0
+                  ? isDark
+                    ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                    : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                  : isDark
+                  ? 'bg-slate-800/90 text-emerald-400 border-slate-700 hover:border-emerald-500/40 hover:bg-slate-700 shadow-emerald-950/50'
+                  : 'bg-white text-emerald-700 border-slate-300 hover:bg-slate-50 hover:border-emerald-400 shadow-slate-200'
+              }`}
+              aria-label="Redo 1 Round"
+              title="Redo 1 Round"
+            >
+              <svg className="w-4 h-4 stroke-[2.3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 14 5-5-5-5m5 5h-9a7 7 0 0 0 0 14h2" />
+              </svg>
+            </button>
+
+            <button
+              onClick={handleResetGame}
+              className={`w-12 h-8 flex items-center justify-center rounded-lg border shadow-xs transition active:scale-95 ${
+                isDark
+                  ? 'bg-slate-800/90 text-rose-400 border-slate-700 hover:border-rose-500/50 hover:bg-slate-700 shadow-rose-950/50'
+                  : 'bg-white text-rose-600 border-slate-300 hover:bg-rose-50 hover:border-rose-300 shadow-slate-200'
+              }`}
+              aria-label="Reset"
+              title="Reset"
+            >
+              <svg className="w-4 h-4 stroke-[2.3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 7v5h-5M4 17v-5h5" />
+                <path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3" />
+              </svg>
+            </button>
           </div>
-
-          {/* Calculate Button */}
-          <button
-            onClick={calculateRound}
-            className="w-full h-8 py-1 px-3 bg-[#155eab] hover:bg-blue-800 text-white font-bold text-xs rounded-md shadow-xs transition active:scale-98"
-          >
-            Calculate &amp; Add Round
-          </button>
-
-          {/* Status Message Container (Fixed reservation to avoid height changes) */}
-          <div className="h-4 flex items-center justify-center overflow-hidden">
-            {roundMessage && (
-              <div
-                id="roundMessage"
-                role="status"
-                aria-live="polite"
-                className={`text-center font-bold text-[11px] px-2 py-0.5 rounded border truncate w-full ${
-                  teamSelectError
-                    ? 'text-red-800 bg-red-50 border-red-300 ring-1 ring-red-200'
-                    : 'text-blue-900 bg-blue-50 border-blue-200'
-                }`}
-              >
-                {roundMessage}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Action Bar (Undo, Redo, Reset) */}
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={handleUndo}
-            disabled={roundHistory.length === 0}
-            className={`w-12 h-8 flex items-center justify-center rounded-md border shadow-2xs transition active:scale-95 ${
-              roundHistory.length === 0
-                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe] hover:bg-blue-100'
-            }`}
-            aria-label="Undo 1 Round"
-            title="Undo 1 Round"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 14 4 9l5-5M4 9h9a7 7 0 0 1 0 14h-2" />
-            </svg>
-          </button>
-
-          <button
-            onClick={handleRedo}
-            disabled={roundRedoStack.length === 0}
-            className={`w-12 h-8 flex items-center justify-center rounded-md border shadow-2xs transition active:scale-95 ${
-              roundRedoStack.length === 0
-                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0] hover:bg-green-100'
-            }`}
-            aria-label="Redo 1 Round"
-            title="Redo 1 Round"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 14 5-5-5-5m5 5h-9a7 7 0 0 0 0 14h2" />
-            </svg>
-          </button>
-
-          <button
-            onClick={handleResetGame}
-            className="w-12 h-8 flex items-center justify-center rounded-md border shadow-2xs bg-[#fff7ed] text-[#c2410c] border-[#fed7aa] hover:bg-orange-100 transition active:scale-95"
-            aria-label="Reset"
-            title="Reset"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 7v5h-5M4 17v-5h5" />
-              <path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3" />
-            </svg>
-          </button>
         </div>
-      </div>
       </div>
 
       {/* Modals */}
-      <GameRulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+      <GameRulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} isDark={isDark} />
       <GameLogModal
         isOpen={isLogOpen}
         onClose={() => setIsLogOpen(false)}
@@ -960,6 +1238,7 @@ export default function App() {
         score2={score2}
         winLimit={winLimit}
         onClearLog={() => setGameLog([])}
+        isDark={isDark}
       />
       <WinnerCelebration
         isOpen={isWinnerOpen}
@@ -972,6 +1251,7 @@ export default function App() {
           setIsWinnerOpen(false);
           handleResetGame();
         }}
+        isDark={isDark}
       />
       <InstallModal
         isOpen={isInstallOpen}
